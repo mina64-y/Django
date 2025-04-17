@@ -1,0 +1,15 @@
+django
+djangorestframework
+djangorestframework-simplejwt[crypto] # For JWT authentication
+django-cors-headers           # For Cross-Origin Resource Sharing
+django-filter                 # For API filtering
+drf-spectacular               # For API documentation (OpenAPI)
+celery                        # For asynchronous tasks
+redis                         # Recommended Celery broker/backend
+mysqlclient                   # MySQL database connector
+python-dotenv                 # To load environment variables from .env
+requests                      # For calling Gemini API
+weasyprint                    # For PDF generation (requires system dependencies like Pango, Cairo)
+# Add any specific AI/ML libraries if models run within Django/Celery (e.g., torch, tensorflow)
+# Pillow                      # For image handling if needed
+# gTTS, pydub (if text-to-speech needed for accessibility/other features)

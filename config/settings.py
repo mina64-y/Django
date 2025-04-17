@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.patients',
     'apps.diagnosis',
+    'apps.multi_omics',
     # 'apps.medications', # If created as a separate app
 ]
 
@@ -262,6 +263,22 @@ LOGGING = {
     },
 }
 
+# --- AI 모델 파일 경로 설정 ---
+AI_MODELS_DIR = BASE_DIR / 'ai_models' # 새로 만든 폴더 경로
+
+PANCREAS_CLASSIFY_MODEL_PATH = AI_MODELS_DIR / 'best_model_auc_20250408-125244.pth' 
+PANCREAS_SEGMENT_MODEL_PATH = AI_MODELS_DIR / 'best_model_20250408-122756.pth'    
+GENE_MODEL_PATH = AI_MODELS_DIR / 'best_random_forest_model.pkl'
+PROTEIN_MODEL_PATH = AI_MODELS_DIR / 'pro_MLPClassifier_best_model.pkl'
+METHYLATION_MODEL_PATH = AI_MODELS_DIR / 'methyl_SVM_best_model.pkl'
+CNV_MODEL_PATH = AI_MODELS_DIR / 'cnv-k-NN_best_model.pkl'
+
+# --- Multi-omics Columns Files ---
+GENE_COLUMNS_PATH = AI_MODELS_DIR / 'gene_columns.pkl'
+PROTEIN_COLUMNS_PATH = AI_MODELS_DIR / 'protein_columns.pkl'
+METHYLATION_COLUMNS_PATH = AI_MODELS_DIR / 'methylation_columns.pkl'
+CNV_COLUMNS_PATH = AI_MODELS_DIR / 'cnv_columns.pkl'
+    
 # --- drf-spectacular Settings (API Docs) ---
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Medical CDSS API',

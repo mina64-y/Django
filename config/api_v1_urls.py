@@ -18,4 +18,5 @@ urlpatterns = [
     path('', include('apps.users.urls')),     # 예: /api/v1/users/register/
     path('', include('apps.patients.urls')),   # 예: /api/v1/patients/
     path('', include('apps.diagnosis.urls')),  # 예: /api/v1/diagnosis/requests/
+    path('', include('apps.multi_omics.urls')),
 ]
