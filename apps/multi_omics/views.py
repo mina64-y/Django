@@ -8,6 +8,9 @@ from .serializers import (
 )
 from .tasks import run_multi_omics_prediction_task
 from apps.users.permissions import IsClinician # 의료인 권한
+from django.http import FileResponse, Http404
+import os
+from django.core.files.storage import default_storage
 
 class MultiOmicsRequestViewSet(viewsets.ModelViewSet):
     """ Multi-omics 예측 요청 생성 및 조회 API """
@@ -78,4 +81,25 @@ class MultiOmicsResultViewSet(viewsets.ReadOnlyModelViewSet):
              return MultiOmicsResult.objects.filter(request__patient__user=user).select_related('request', 'request__patient__user', 'request__requester')
         return MultiOmicsResult.objects.none()
 
-    # PDF 다운로드 기능 필요 시 DiagnosisResultViewSet 처럼 구현 가능
+    @action(detail=True, methods=['get'], url_path='download-pdf')
+    def download_pdf(self, request, pk=None):
+        """ 생성된 Multi-omics PDF 보고서 다운로드 """
+        result = self.get_object() # 결과 객체 (pk는 request_id)
+        if not result.pdf_report_path:
+            raise Http404("PDF report is not available for this result.")
+
+        pdf_relative_path = result.pdf_report_path
+        try:
+            if not default_storage.exists(pdf_relative_path):
+                 raise Http404(f"PDF file not found at path: {pdf_relative_path}")
+
+            pdf_file = default_storage.open(pdf_relative_path, 'rb')
+            response = FileResponse(pdf_file, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="multi_omics_report_{result.request_id}.pdf"'
+            # 강제 다운로드: response['Content-Disposition'] = f'attachment; filename=...'
+            return response
+        except FileNotFoundError:
+            raise Http404("PDF file not found.")
+        except Exception as e:
+             print(f"Error serving Multi-omics PDF for result {pk}: {e}")
+             return Response({"error": "Could not serve PDF file."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

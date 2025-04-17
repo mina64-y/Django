@@ -1,3 +1,8 @@
+# 참고: 위 코드에서 폰트 설정(font_config_path 또는 font_config) 부분은 
+# 실제 프로젝트의 정적 파일 설정 및 폰트 파일 위치에 맞게 조정해야 합니다.
+# /static/css/pdf_fonts.css 파일에 @font-face 와 
+# body { font-family: ... } 를 정의하는 것이 좋습니다.
+
 # apps/multi_omics/utils.py
 import joblib
 import os
@@ -11,6 +16,7 @@ from django.conf import settings
 from django.core.files.storage import default_storage # 파일 시스템 접근용
 import traceback
 import google.generativeai as genai # Gemini 라이브러리 import
+from django.template.loader import render_to_string
 
 # --- Gemini 설정 ---
 GEMINI_API_KEY = settings.GEMINI_API_KEY
@@ -328,3 +334,70 @@ def get_gemini_interpretation_for_multiomics(ensemble_prob, individual_preds, re
         print(f"!!!!!!!! ERROR calling Gemini API !!!!!!!!!")
         print(traceback.format_exc())
         return f"AI 해석 생성 중 오류 발생 ({type(e).__name__}). 관리자 문의."
+    
+# --- Multi-omics PDF 생성 유틸리티 ---
+def generate_multi_omics_pdf(result_obj):
+    """ MultiOmicsResult 객체를 받아 PDF 생성 후 상대 경로 반환 """
+    if not isinstance(result_obj, MultiOmicsResult):
+        print("ERROR: Invalid MultiOmicsResult object passed to PDF generator.")
+        return None
+
+    try:
+        request_id = result_obj.request_id
+        template_path = 'multi_omics/pdf_report_template_omics.html'
+
+        # 이미지 파일의 절대 URL 생성 (MEDIA_URL 사용)
+        def get_absolute_media_url(relative_path):
+            if relative_path:
+                # 운영 환경에서는 settings.SITE_URL 같은 것을 정의하여 사용하거나,
+                # request 객체가 있다면 request.build_absolute_uri 사용
+                # 여기서는 간단히 MEDIA_URL 만 사용 (로컬 개발 환경 가정)
+                # 실제 배포 시에는 전체 URL 생성이 필요할 수 있음
+                if settings.MEDIA_URL.startswith('http'):
+                     return f"{settings.MEDIA_URL.rstrip('/')}/{relative_path.lstrip('/')}"
+                else: # 상대 경로면 그대로 사용 (WeasyPrint base_url 에서 처리)
+                     return f"{settings.MEDIA_URL}{relative_path}"
+            return None
+
+        context = {
+            'result': result_obj,
+            # 플롯 이미지 URL 전달
+            'gene_plot_url': get_absolute_media_url(result_obj.gene_plot_path),
+            'protein_plot_url': get_absolute_media_url(result_obj.protein_plot_path),
+            'methylation_plot_url': get_absolute_media_url(result_obj.methylation_plot_path),
+            'cnv_plot_url': get_absolute_media_url(result_obj.cnv_plot_path),
+            'gauge_plot_url': get_absolute_media_url(result_obj.gauge_plot_path),
+            'radar_plot_url': get_absolute_media_url(result_obj.radar_plot_path),
+            # base_url: 템플릿 내 상대 경로 리소스(예: CSS, 로고 이미지) 해석 기준
+            'base_url': settings.MEDIA_URL # 또는 settings.STATIC_URL 등 기준 경로
+        }
+
+        # 한글 폰트 설정 (CT PDF 와 동일하게)
+        # font_config = CSS(string='@font-face { font-family: "Malgun Gothic"; src: url(/static/fonts/malgun.ttf); } body { font-family: "Malgun Gothic"; }')
+        font_config_path = os.path.join(settings.STATICFILES_DIRS[0], 'css', 'pdf_fonts.css') if settings.STATICFILES_DIRS else None
+        stylesheets = [CSS(filename=font_config_path)] if font_config_path and os.path.exists(font_config_path) else []
+        # 또는 CSS 객체 직접 생성
+        # font_config = CSS(string='@font-face { ... } body { font-family: ...;}')
+        # stylesheets=[font_config]
+
+
+        html_string = render_to_string(template_path, context)
+        html = HTML(string=html_string, base_url=context.get('base_url', settings.MEDIA_URL)) # 이미지 경로 해석 기준
+
+        # 파일명 및 저장 경로 설정 (media/pdfs/multi_omics/)
+        pdf_filename = f"multi_omics_report_{request_id}.pdf"
+        pdf_dir_rel = os.path.join('pdfs', 'multi_omics')
+        pdf_dir_abs = os.path.join(settings.MEDIA_ROOT, pdf_dir_rel)
+        os.makedirs(pdf_dir_abs, exist_ok=True)
+        pdf_full_path = os.path.join(pdf_dir_abs, pdf_filename)
+
+        html.write_pdf(pdf_full_path, stylesheets=stylesheets) # 폰트 적용
+        print(f"Generated Multi-omics PDF report: {pdf_full_path}")
+
+        # MEDIA_ROOT 기준 상대 경로 반환
+        return os.path.join(pdf_dir_rel, pdf_filename).replace("\\", "/")
+
+    except Exception as e:
+        print(f"!!!!!!!! ERROR generating PDF for MultiOmics request {result_obj.request_id} !!!!!!!!!")
+        print(traceback.format_exc())
+        return None

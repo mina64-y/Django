@@ -1,15 +1,46 @@
-django
+# requirements.txt
+
+# --- Core Django & DRF ---
+django>=4.2,<5.0
 djangorestframework
-djangorestframework-simplejwt[crypto] # For JWT authentication
-django-cors-headers           # For Cross-Origin Resource Sharing
-django-filter                 # For API filtering
-drf-spectacular               # For API documentation (OpenAPI)
-celery                        # For asynchronous tasks
-redis                         # Recommended Celery broker/backend
-mysqlclient                   # MySQL database connector
-python-dotenv                 # To load environment variables from .env
-requests                      # For calling Gemini API
-weasyprint                    # For PDF generation (requires system dependencies like Pango, Cairo)
-# Add any specific AI/ML libraries if models run within Django/Celery (e.g., torch, tensorflow)
-# Pillow                      # For image handling if needed
-# gTTS, pydub (if text-to-speech needed for accessibility/other features)
+djangorestframework-simplejwt[crypto] # JWT Authentication
+django-cors-headers           # CORS Headers
+django-filter                 # API Filtering
+drf-spectacular               # API Documentation (OpenAPI)
+
+# --- Database ---
+mysqlclient                   # MySQL Driver (Requires system libraries)
+
+# --- Asynchronous Tasks ---
+celery>=5.0                   # Celery Task Queue
+redis                         # Celery Broker/Backend
+
+# --- Utilities ---
+python-dotenv                 # Load .env files
+requests                      # HTTP Requests (e.g., for external APIs if needed)
+Pillow                        # Python Imaging Library (often needed by Django)
+
+# --- PDF Generation ---
+weasyprint                    # HTML to PDF Generation (Requires system libraries like Pango, Cairo)
+
+# --- Plotting & Visualization ---
+matplotlib                    # 2D Plotting
+seaborn                       # Enhanced plotting (Optional, based on previous code)
+plotly                        # 3D Interactive Plotting
+scikit-image                  # Image processing (for marching_cubes)
+kaleido                       # Saving Plotly static images (for 3D in PDF)
+
+# --- AI / Machine Learning / Data Handling ---
+# Common
+numpy
+pandas
+joblib                        # Loading .pkl models/files
+scikit-learn                  # For scikit-learn based models (.pkl) & metrics
+
+# CT Diagnosis (PyTorch based)
+torch                         # PyTorch core
+monai[nibabel, tqdm]          # MONAI framework for medical imaging (includes nibabel)
+# nibabel                     # Reading NIfTI files (included via monai extra)
+
+# Gemini AI
+google-generativeai           # Google Generative AI SDK

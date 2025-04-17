@@ -75,17 +75,24 @@ class MultiOmicsResult(models.Model):
     # 사용된 임계값 (참고용)
     threshold_used = models.FloatField(_("Threshold Used"), null=True, blank=True)
 
-    # 생성된 플롯 경로 (MEDIA_URL 기준 상대 경로)
-    gene_plot_path = models.CharField(_("Gene Plot Path"), max_length=512, blank=True)
-    protein_plot_path = models.CharField(_("Protein Plot Path"), max_length=512, blank=True)
-    methylation_plot_path = models.CharField(_("Methylation Plot Path"), max_length=512, blank=True)
-    cnv_plot_path = models.CharField(_("CNV Plot Path"), max_length=512, blank=True)
-    gauge_plot_path = models.CharField(_("Gauge Plot Path"), max_length=512, blank=True)
-    radar_plot_path = models.CharField(_("Radar Plot Path"), max_length=512, blank=True)
+    # 생성된 플롯 경로
+    gene_plot_path = models.CharField(_("Gene Plot Path"), max_length=512, blank=True, null=True) # null=True 추가
+    protein_plot_path = models.CharField(_("Protein Plot Path"), max_length=512, blank=True, null=True)
+    methylation_plot_path = models.CharField(_("Methylation Plot Path"), max_length=512, blank=True, null=True)
+    cnv_plot_path = models.CharField(_("CNV Plot Path"), max_length=512, blank=True, null=True)
+    gauge_plot_path = models.CharField(_("Gauge Plot Path"), max_length=512, blank=True, null=True)
+    radar_plot_path = models.CharField(_("Radar Plot Path"), max_length=512, blank=True, null=True)
+
+    # --- PDF 보고서 경로 필드 추가 ---
+    pdf_report_path = models.CharField(
+        _("PDF Report Path"), max_length=512, blank=True, null=True # null=True 추가
+    )
 
     # Gemini 해석
     gemini_interpretation = models.TextField(_("Gemini Interpretation"), blank=True)
-
+    error_message = models.TextField(_("Error Message"), blank=True)
+    completion_timestamp = models.DateTimeField(_("Completion Time"), null=True, blank=True)
+    
     # 오류 메시지
     error_message = models.TextField(_("Error Message"), blank=True)
     completion_timestamp = models.DateTimeField(_("Completion Time"), null=True, blank=True)

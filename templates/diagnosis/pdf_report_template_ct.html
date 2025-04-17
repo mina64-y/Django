@@ -1,0 +1,173 @@
+{# templates/diagnosis/pdf_report_template_ct.html #}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CT 진단 예측 결과 PDF</title>
+    <style>
+        /* WeasyPrint 는 복잡한 CSS 를 완벽히 지원하지 않을 수 있습니다. 간단한 스타일 위주로 작성합니다. */
+        /* 실제 폰트 경로는 static 설정 및 generate_ct_diagnosis_pdf 함수의 CSS 객체/파일 경로와 일치해야 합니다. */
+        @font-face {
+            font-family: 'Malgun Gothic'; /* 또는 NanumGothic */
+            /* src: url('{{ base_url }}/static/fonts/malgun.ttf'); */ /* CSS 객체에서 처리 가정 */
+        }
+        body {
+            font-family: 'Malgun Gothic', sans-serif; /* CSS 객체에서 처리 가정 */
+            font-size: 10pt;
+            line-height: 1.5;
+            color: #333;
+        }
+        .container { width: 95%; margin: 1cm auto; }
+        h3 {
+            text-align: center;
+            color: #2c3e50; /* 제목 색상 */
+            border-bottom: 2px solid #3498db; /* 파란색 계열 밑줄 */
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        h4 {
+            color: #3498db; /* 파란색 계열 소제목 */
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #bdc3c7; /* 회색 밑줄 */
+            padding-bottom: 5px;
+        }
+        .section { margin-bottom: 20px; }
+        .label { font-weight: bold; color: #555; min-width: 120px; display: inline-block; }
+        .value { display: inline; }
+        .plot-container { text-align: center; margin-top: 15px; margin-bottom: 15px; }
+        img.plot {
+            max-width: 70%; /* PDF 페이지 너비에 맞게 조절 */
+            height: auto;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+        }
+        .interpretation {
+            background-color: #ecf0f1; /* 연한 회색 배경 */
+            border: 1px solid #bdc3c7;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px; /* 약간 둥근 모서리 */
+        }
+        .warning {
+            color: #e74c3c; /* 빨간색 계열 경고 */
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px dashed #e74c3c;
+            text-align: center;
+        }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>CT 영상 예측 결과 보고서</h3>
+
+        <div class="section">
+            <h4>기본 정보</h4>
+            <table>
+                <tr>
+                    <th><span class="label">환자 ID</span></th>
+                    <td><span class="value">{{ result.patient.user.id | default:"N/A" }}</span></td> {# 모델 구조에 따라 접근 #}
+                </tr>
+                <tr>
+                    <th><span class="label">요청 의료인</span></th>
+                    <td><span class="value">{{ result.requester.get_full_name|default:result.requester.username }}</span></td>
+                </tr>
+                <tr>
+                    <th><span class="label">요청 시간</span></th>
+                    <td><span class="value">{{ result.request_timestamp|date:"Y년 m월 d일 H:i" }}</span></td>
+                </tr>
+                <tr>
+                    <th><span class="label">분석 완료 시간</span></th>
+                    <td><span class="value">{{ completion_timestamp|date:"Y년 m월 d일 H:i" | default:"N/A"}}</span></td> {# context 에서 전달받거나 result 객체에서 접근 #}
+                </tr>
+                 <tr>
+                    <th><span class="label">스캔 유형</span></th>
+                    <td><span class="value">{{ result.scan_type | default:"췌장 CT" }}</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h4>AI 예측 결과</h4>
+            <table>
+                <tr>
+                    <th><span class="label">분류 예측</span></th>
+                     {# utils.py의 pdf_context 생성 부분 참고하여 변수명 일치 필요 #}
+                    <td><span class="value"><strong>{{ classification_prediction_display | default:"판독 불가" }}</strong></span></td>
+                </tr>
+                 <tr>
+                    <th><span class="label">암 의심 확률</span></th>
+                    {# utils.py의 pdf_context 생성 부분 참고하여 변수명 일치 필요 #}
+                    <td><span class="value">{{ classification_probability_percent | default:"N/A" }}</span></td>
+                </tr>
+                {% with vol=segmentation_metrics.volume_voxels %} {# with 태그로 변수 할당 #}
+                <tr>
+                    <th><span class="label">분할 결과 (병변 의심 영역)</span></th>
+                    <td>
+                        <span class="value">
+                            {% if vol is not None %}
+                                {% if vol > 0 %}
+                                    탐지됨 (상대적 크기 지표: {{ vol }})
+                                {% else %}
+                                    탐지되지 않음
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endwith %}
+            </table>
+        </div>
+
+        {# 2D 시각화 이미지 포함 #}
+        {% if input_slice_plot_url or segmentation_map_plot_url %}
+        <div class="section">
+            <h4>참고용 단면 이미지</h4>
+            {% if input_slice_plot_url %}
+            <div class="plot-container">
+                <p>입력 영상 대표 슬라이스</p>
+                <img class="plot" src="{{ input_slice_plot_url }}" alt="Input CT Slice">
+            </div>
+            {% endif %}
+            {% if segmentation_map_plot_url %}
+            <div class="plot-container">
+                <p>분할 결과 오버레이</p>
+                <img class="plot" src="{{ segmentation_map_plot_url }}" alt="Segmentation Overlay">
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# 3D 시각화 이미지는 여기서 제외됨 #}
+
+        {% if gemini_interpretation %}
+        <div class="section">
+            <h4>AI 자동 해석</h4>
+            <div class="interpretation">
+                <p>{{ gemini_interpretation|linebreaksbr }}</p> {# linebreaksbr 로 줄바꿈 처리 #}
+            </div>
+            <div class="warning">
+                🚨 중요 안내 🚨<br>
+                본 AI 예측 및 해석 결과는 의료진의 진단을 보조하기 위한 참고 자료이며, 최종적인 의학적 판단이나 진단으로 간주될 수 없습니다.<br>
+                반드시 담당 의사와 상담하여 정확한 진단 및 치료 계획을 세우시기 바랍니다.
+            </div>
+        </div>
+        {% endif %}
+
+         {% if error_message %}
+        <div class="section">
+            <h4>오류 정보</h4>
+            <p style="color: #c0392b;">예측 처리 중 다음 오류가 발생했습니다: {{ error_message }}</p>
+        </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

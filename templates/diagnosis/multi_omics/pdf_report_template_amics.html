@@ -1,0 +1,144 @@
+{# templates/multi_omics/pdf_report_template_omics.html #}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-omics 예측 결과 PDF</title>
+    <style>
+        /* CT PDF 템플릿과 유사한 스타일 사용 */
+        @font-face {
+            font-family: 'Malgun Gothic'; /* 또는 NanumGothic */
+            /* src: url(...); utils.py 에서 CSS 객체/파일 경로와 일치해야 함 */
+        }
+        body { font-family: 'Malgun Gothic', sans-serif; font-size: 10pt; line-height: 1.5; color: #333; }
+        .container { width: 95%; margin: 1cm auto; }
+        h3 { text-align: center; color: #2c3e50; border-bottom: 2px solid #8e44ad; padding-bottom: 10px; margin-bottom: 30px; } /* 보라색 계열 */
+        h4 { color: #8e44ad; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }
+        .section { margin-bottom: 20px; }
+        .label { font-weight: bold; color: #555; min-width: 150px; display: inline-block; } /* 라벨 너비 조정 */
+        .value { display: inline; }
+        .plot-container { text-align: center; margin-top: 15px; margin-bottom: 15px; }
+        img.plot { max-width: 60%; height: auto; border: 1px solid #ddd; margin-top: 5px; } /* 플롯 크기 조정 */
+        img.radar-plot { max-width: 50%; } /* 레이더 플롯 크기 */
+        .interpretation { background-color: #f8f9fa; border-left: 3px solid #8e44ad; padding: 15px; margin-top: 10px; border-radius: 4px; }
+        .warning { color: #e74c3c; font-weight: bold; margin-top: 15px; padding: 10px; border: 1px dashed #e74c3c; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        ul { padding-left: 20px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>다중 오믹스(Multi-omics) 예측 결과 보고서</h3>
+
+        <div class="section">
+            <h4>기본 정보</h4>
+             {# context 에서 result 객체를 전달받음 #}
+            <table>
+                <tr>
+                    <th><span class="label">환자 ID</span></th>
+                    <td><span class="value">{{ result.request.patient.user.id | default:"N/A" }}</span></td>
+                </tr>
+                <tr>
+                    <th><span class="label">요청 의료인</span></th>
+                    <td><span class="value">{{ result.request.requester.get_full_name|default:result.request.requester.username }}</span></td>
+                </tr>
+                 <tr>
+                    <th><span class="label">요청 시간</span></th>
+                    <td><span class="value">{{ result.request.request_timestamp|date:"Y년 m월 d일 H:i" }}</span></td>
+                </tr>
+                <tr>
+                    <th><span class="label">완료 시간</span></th>
+                    <td><span class="value">{{ result.completion_timestamp|date:"Y년 m월 d일 H:i" | default:"N/A" }}</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h4>AI 예측 결과 요약</h4>
+            <table>
+                <tr>
+                    <th><span class="label">앙상블 예측 확률</span></th>
+                    <td>
+                        <span class="value">
+                            {% if result.ensemble_probability is not None %}
+                                {{ result.ensemble_probability|floatformat:"1%" }}
+                            {% else %} N/A {% endif %}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <th><span class="label">앙상블 예측 결과</span></th>
+                    <td>
+                        <span class="value">
+                            {% if result.ensemble_prediction == 1 %} 암 의심
+                            {% elif result.ensemble_prediction == 0 %} 정상 의심
+                            {% else %} 판독 불가/N/A {% endif %}
+                            (임계값: {{ result.threshold_used|floatformat:3|default:"N/A" }})
+                        </span>
+                    </td>
+                </tr>
+            </table>
+            {% if gauge_plot_url %}
+            <div class="plot-container">
+                <p>앙상블 예측 확률 시각화</p>
+                <img class="plot" src="{{ gauge_plot_url }}" alt="Ensemble Probability Gauge">
+            </div>
+            {% endif %}
+        </div>
+
+        {% if result.individual_probabilities %}
+        <div class="section">
+            <h4>개별 데이터 기반 예측 확률</h4>
+            <ul>
+                {% for key, prob in result.individual_probabilities.items %}
+                    {% if prob is not None %}
+                        <li><span class="label">{{ key|capfirst }}:</span> {{ prob|floatformat:"1%" }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+             {% if radar_plot_url %}
+            <div class="plot-container">
+                 <p>개별 예측 확률 비교</p>
+                <img class="plot radar-plot" src="{{ radar_plot_url }}" alt="Individual Probabilities Radar">
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if result.gemini_interpretation %}
+        <div class="section">
+            <h4>AI 자동 해석</h4>
+            <div class="interpretation">
+                <p>{{ result.gemini_interpretation|linebreaksbr }}</p>
+            </div>
+             <div class="warning">
+                🚨 중요 안내 🚨<br>
+                본 AI 예측 및 해석 결과는 의료진의 진단을 보조하기 위한 참고 자료이며, 최종적인 의학적 판단이나 진단으로 간주될 수 없습니다.<br>
+                반드시 담당 의사와 상담하여 정확한 진단 및 치료 계획을 세우시기 바랍니다.
+            </div>
+        </div>
+        {% endif %}
+
+        {# 개별 데이터 분포 플롯 (선택적으로 포함) #}
+        {% if gene_plot_url or protein_plot_url or methylation_plot_url or cnv_plot_url %}
+        <div class="section">
+            <h4>입력 데이터 분포 (참고용)</h4>
+            {% if gene_plot_url %}<div class="plot-container"><img class="plot" src="{{ gene_plot_url }}" alt="Gene Data Distribution"></div>{% endif %}
+            {% if protein_plot_url %}<div class="plot-container"><img class="plot" src="{{ protein_plot_url }}" alt="Protein Data Distribution"></div>{% endif %}
+            {% if methylation_plot_url %}<div class="plot-container"><img class="plot" src="{{ methylation_plot_url }}" alt="Methylation Data Distribution"></div>{% endif %}
+            {% if cnv_plot_url %}<div class="plot-container"><img class="plot" src="{{ cnv_plot_url }}" alt="CNV Data Distribution"></div>{% endif %}
+        </div>
+        {% endif %}
+
+         {% if result.error_message %}
+        <div class="section">
+            <h4>오류 정보</h4>
+            <p style="color: #c0392b;">예측 처리 중 다음 오류가 발생했습니다: {{ result.error_message }}</p>
+        </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

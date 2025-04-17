@@ -1,0 +1,101 @@
+{# templates/multi_omics/pdf_report_template_omics.html #}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-omics 예측 결과 PDF</title>
+    <style>
+        /* 한글 폰트 설정 (utils.py의 CSS와 동일하게) */
+        @font-face {
+            font-family: 'Malgun Gothic'; /* 또는 NanumGothic */
+            /* src: url(...); utils.py 에서 CSS 객체로 전달하므로 여기서 직접 필요 없을 수 있음 */
+        }
+        body { font-family: 'Malgun Gothic', sans-serif; font-size: 10pt; line-height: 1.5; }
+        .container { width: 90%; margin: auto; }
+        h3, h4 { color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+        p { margin-bottom: 8px; }
+        .section { margin-bottom: 25px; }
+        .label { font-weight: bold; color: #555; }
+        .plot-container { text-align: center; margin-bottom: 15px; }
+        img { max-width: 80%; height: auto; border: 1px solid #ddd; }
+        .interpretation { background-color: #f8f9fa; border-left: 3px solid #6c757d; padding: 10px; margin-top: 5px;}
+        .warning { color: #dc3545; font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3 style="text-align: center; color: #007bff;">다중 오믹스(Multi-omics) 예측 결과 보고서</h3>
+
+        <div class="section">
+            <h4>기본 정보</h4>
+            <p><span class="label">환자 ID:</span> {{ result.request.patient.user.id }}</p> {# 또는 다른 식별자 #}
+            <p><span class="label">요청 의료인:</span> {{ result.request.requester.get_full_name|default:result.request.requester.username }}</p>
+            <p><span class="label">요청 시간:</span> {{ result.request.request_timestamp|date:"Y년 m월 d일 H:i" }}</p>
+            <p><span class="label">완료 시간:</span> {{ result.completion_timestamp|date:"Y년 m월 d일 H:i" }}</p>
+        </div>
+
+        <div class="section">
+            <h4>예측 결과 요약</h4>
+            <p><span class="label">앙상블 예측 확률:</span>
+                {% if result.ensemble_probability is not None %}
+                    {{ result.ensemble_probability|floatformat:"1%" }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
+            <p><span class="label">앙상블 예측 결과:</span>
+                {% if result.ensemble_prediction == 1 %} 암 의심
+                {% elif result.ensemble_prediction == 0 %} 정상 의심
+                {% else %} 판독 불가/N/A
+                {% endif %}
+                (임계값: {{ result.threshold_used|default:"N/A" }})
+            </p>
+            {% if gauge_plot_url %}
+            <div class="plot-container">
+                <img src="{{ gauge_plot_url }}" alt="Ensemble Probability Gauge">
+            </div>
+            {% endif %}
+        </div>
+
+        {% if result.individual_probabilities %}
+        <div class="section">
+            <h4>개별 데이터 기반 예측 확률</h4>
+            <ul>
+                {% for key, prob in result.individual_probabilities.items %}
+                    {% if prob is not None %}
+                        <li><span class="label">{{ key|capfirst }}:</span> {{ prob|floatformat:"1%" }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+             {% if radar_plot_url %}
+            <div class="plot-container">
+                <img src="{{ radar_plot_url }}" alt="Individual Probabilities Radar">
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if result.gemini_interpretation %}
+        <div class="section">
+            <h4>AI 자동 해석</h4>
+            <div class="interpretation">
+                <p>{{ result.gemini_interpretation|linebreaksbr }}</p>
+            </div>
+             <p class="warning">🚨 중요: 이 AI 해석은 참고용이며 최종 진단이 아닙니다. 반드시 전문의와 상담하십시오.</p>
+        </div>
+        {% endif %}
+
+        {# 개별 데이터 분포 플롯 (선택적으로 포함) #}
+        {#
+        <div class="section">
+            <h4>입력 데이터 분포 (참고용)</h4>
+            {% if gene_plot_url %}<div class="plot-container"><img src="{{ gene_plot_url }}" alt="Gene Data Distribution"></div>{% endif %}
+            {% if protein_plot_url %}<div class="plot-container"><img src="{{ protein_plot_url }}" alt="Protein Data Distribution"></div>{% endif %}
+            {% if methylation_plot_url %}<div class="plot-container"><img src="{{ methylation_plot_url }}" alt="Methylation Data Distribution"></div>{% endif %}
+            {% if cnv_plot_url %}<div class="plot-container"><img src="{{ cnv_plot_url }}" alt="CNV Data Distribution"></div>{% endif %}
+        </div>
+        #}
+
+    </div>
+</body>
+</html>

@@ -5,11 +5,12 @@ from celery import shared_task
 from django.utils import timezone
 from django.conf import settings
 from django.core.files.storage import default_storage
+from .utils import generate_multi_omics_pdf
 from .models import MultiOmicsRequest, MultiOmicsResult, MultiOmicsRequestStatus
 from .utils import (
     load_columns, align_columns_and_fillna, predict_ensemble, # predict_cancer 대신 predict_ensemble 사용
     save_plot, save_gauge_plot, save_radar_plot,
-    get_gemini_interpretation_for_multiomics, load_csv_from_media
+    get_gemini_interpretation_for_multiomics, load_csv_from_media,
 )
 import traceback
 import os
@@ -76,19 +77,36 @@ def run_multi_omics_prediction_task(self, request_id):
             ensemble_prob, individual_preds, request # request 객체 전달하여 컨텍스트 추가
         )
 
-        # --- 5. 결과 저장 ---
-        print("   Saving results to database...")
-        result_data_for_db['error_message'] = "" # 성공 시 오류 메시지 초기화
-        result_data_for_db['completion_timestamp'] = timezone.now()
+        # --- 5. 결과 저장 (PDF 생성 전 임시 저장 또는 완료 후 업데이트) ---
+        print("   Saving preliminary results to database...")
+        # PDF 경로 없이 먼저 저장 또는 업데이트
+        results_for_db['error_message'] = "" # 오류 메시지 초기화
+        results_for_db['completion_timestamp'] = timezone.now() # 완료 시간 설정
 
         result_obj, created = MultiOmicsResult.objects.update_or_create(
             request=request,
-            defaults=result_data_for_db # 준비된 딕셔너리 사용
+            defaults=results_for_db # 현재까지의 결과로 업데이트
         )
+
+        # --- 6. PDF 생성 및 경로 저장 ---
+        print("   Generating PDF report...")
+        # generate_multi_omics_pdf 는 result 객체를 직접 받음
+        pdf_rel_path = generate_multi_omics_pdf(result_obj)
+        if pdf_rel_path:
+            result_obj.pdf_report_path = pdf_rel_path
+            result_obj.save(update_fields=['pdf_report_path']) # PDF 경로만 업데이트
+            print(f"   Saved PDF path to result: {pdf_rel_path}")
+        else:
+            print("   WARN: PDF generation failed. Path not saved.")
+            # PDF 생성 실패 시 처리 (예: 오류 메시지 기록)
+            # result_obj.error_message += "\nPDF generation failed."
+            # result_obj.save(update_fields=['error_message'])
+
+        # --- 7. 최종 상태 업데이트 ---
         request.status = MultiOmicsRequestStatus.COMPLETED
         request.save(update_fields=['status'])
         print(f"[Task {self.request.id}] MultiOmics Request {request_id} COMPLETED.")
-        return {"status": "success", "result_id": result_obj.request_id} # 작업 성공 결과 반환
+        return {"status": "success", "result_id": result_obj.request_id}
 
     except Exception as e:
         print(f"[Task {self.request.id}] FAILED processing MultiOmics Request {request_id}: {e}")
