@@ -81,4 +81,11 @@ venv.bak
 
 # OS generated files
 .DS_Store
-Thumbs.db
+Thumbs.db.env
+venv/
+logs/
+staticfiles/
+media/
+__pycache__/
+*.pyc
+ai_models/
