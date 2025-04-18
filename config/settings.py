@@ -13,7 +13,7 @@ dotenv.load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-secret-key-only-for-dev') # Load from .env
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't') # Load from .env
 
-ALLOWED_HOSTS = [] # Configure for production
+ALLOWED_HOSTS = ['34.31.172.62', 'localhost', '127.0.0.1'] # Configure for production
 
 # Application definition
 INSTALLED_APPS = [

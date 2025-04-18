@@ -3,8 +3,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from django.views.generic.base import RedirectView
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/api/docs/', permanent=False)),
     path('admin/', admin.site.urls),
 
     # API V1 URLs - '/api/v1/' 접두사 사용

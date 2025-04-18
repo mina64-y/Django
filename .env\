@@ -1,0 +1,33 @@
+# Django
+SECRET_KEY==!v_1t7a&lscvgucabca!lv2s199-wp0nc8-a0)hd#*ph9@sl7j # Replace with a generated key
+DEBUG=True # Set to False in production
+
+# Database (MySQL)
+DB_NAME=cdss_db
+DB_USER=cdss_user
+DB_PASSWORD=mySQL$ecure4CDSS!
+DB_HOST=127.0.0.1
+DB_PORT=3306
+ALLOWED_HOSTS=34.31.172.62
+
+# Celery
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# JWT (Optional: Override defaults in settings.py if needed)
+# ACCESS_TOKEN_LIFETIME_MINUTES=5
+# REFRESH_TOKEN_LIFETIME_DAYS=1
+
+# CORS (Example: Allow React dev server and localhost)
+# Separate multiple origins with commas
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# Gemini API
+GEMINI_API_KEY='your_gemini_api_key_here'
+
+# 클라우드 스토리지 (선택 사항: Pre-signed URL 사용 시) - 예: AWS S3
+# AWS_ACCESS_KEY_ID=your_aws_access_key
+# AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+# AWS_STORAGE_BUCKET_NAME=your_s3_bucket_name
+# AWS_S3_REGION_NAME=your_s3_region
+# AWS_S3_ENDPOINT_URL= # Optional: for MinIO etc.

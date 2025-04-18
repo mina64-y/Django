@@ -16,7 +16,7 @@ class DiagnosisResultSerializer(serializers.ModelSerializer):
         model = DiagnosisResult
         # DB 모델 필드에 맞게 정의
         fields = (
-            'request', 'result_summary', 'confidence_score',
+            'request', 'result_summary',
             'classification_prediction', 'classification_probability', # 분류 결과 필드 추가 가정
             'segmentation_metrics', 'input_image_slice_plot', 'segmentation_map_plot',
             'pdf_report_path', 'gemini_interpretation', 'error_message', 'completion_timestamp', 'visualization_3d_html_path',
